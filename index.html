@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>內部資產管理系統 - 水族部</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #34495e;
+            --accent-color: #3498db;
+            --bg-color: #f5f6fa;
+            --text-color: #2c3e50;
+            --border-color: #dcdde1;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+
+        h1 { margin: 0; font-size: 24px; color: var(--primary-color); }
+
+        /* 控制列：分類與視角切換 */
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .tabs { display: flex; gap: 10px; flex-wrap: wrap; }
+        
+        .tab-btn, .view-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border-color);
+            background-color: #f1f2f6;
+            color: var(--secondary-color);
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn:hover, .view-btn:hover { background-color: #e1e2e6; }
+        .tab-btn.active { background-color: var(--accent-color); color: white; border-color: var(--accent-color); }
+        .view-btn.active { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
+
+        /* --- 條列式 (表格) 樣式 --- */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 15px;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th { background-color: #f8f9fa; font-weight: 600; color: var(--primary-color); }
+        tr:hover { background-color: #f1f2f6; }
+
+        .jump-btn {
+            background-color: transparent;
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .jump-btn:hover { background-color: var(--accent-color); color: white; }
+
+        /* --- 照片模式 (網格) 樣式 --- */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.3s;
+        }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px rgba(0,0,0,0.1); }
+        
+        .card img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            display: block;
+            background-color: #ddd;
+        }
+
+        .card-content { padding: 15px; }
+        .fish-name { font-size: 18px; font-weight: bold; margin: 0 0 10px 0; }
+        .fish-price {
+            color: #e74c3c; font-weight: bold; font-size: 16px; margin: 0;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .fish-price span {
+            font-size: 12px; color: #7f8c8d; background: #ecf0f1; padding: 3px 8px; border-radius: 12px;
+        }
+
+        /* 跳轉時的高光動畫 */
+        .highlight {
+            border: 2px solid #e74c3c;
+            box-shadow: 0 0 15px rgba(231, 76, 60, 0.4);
+            animation: flash 1.5s ease-out;
+        }
+
+        @keyframes flash {
+            0% { background-color: #fadbd8; }
+            100% { background-color: white; }
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>📁 資產庫存明細</h1>
+        <span style="color: #7f8c8d; font-size: 14px;" id="todayDate"></span>
+    </header>
+
+    <div class="controls">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="filterCategory('all')">全部顯示</button>
+            <button class="tab-btn" onclick="filterCategory('corydoras')">類別 A (鼠魚)</button>
+            <button class="tab-btn" onclick="filterCategory('snakehead')">類別 B (雷龍)</button>
+            <!-- 新增了飼料與其他的按鈕 -->
+            <button class="tab-btn" onclick="filterCategory('food')">類別 C (飼料)</button>
+            <button class="tab-btn" onclick="filterCategory('others')">類別 D (其他)</button>
+        </div>
+        <div class="views">
+            <button class="view-btn active" id="btnList" onclick="switchView('list')">📄 條列清單</button>
+            <button class="view-btn" id="btnGrid" onclick="switchView('grid')">🖼️ 照片檢視</button>
+        </div>
+    </div>
+
+    <!-- 條列模式 (表格) -->
+    <div id="listView">
+        <table>
+            <thead>
+                <tr>
+                    <th>品項編號 / 名稱</th>
+                    <th>分類</th>
+                    <th>單價 (NT$)</th>
+                    <th>當前庫存</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <!-- 由 JavaScript 自動產生 -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 照片模式 (網格) -->
+    <div id="gridView" class="grid hidden">
+        <!-- 由 JavaScript 自動產生 -->
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // 🐟 資料區 (以後只要修改這裡就好！)
+    // ==========================================
+    const fishData = [
+        // --- 鼠魚區 (corydoras) ---
+        {
+            category: 'corydoras',
+            categoryName: '類別 A',
+            name: '熊貓鼠 (Panda Cory)',
+            price: 50,
+            stock: 15,
+            image: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=500&q=60'
+        },
+        {
+            category: 'corydoras',
+            categoryName: '類別 A',
+            name: '精靈鼠 (Pygmy Cory)',
+            price: 40,
+            stock: 30,
+            image: 'https://images.unsplash.com/photo-1522069169874-c58ec4b604f1?auto=format&fit=crop&w=500&q=60'
+        },
+        
+        // --- 雷龍區 (snakehead) ---
+        {
+            category: 'snakehead',
+            categoryName: '類別 B',
+            name: '七彩雷龍 (Channa bleheri)',
+            price: 450,
+            stock: 3,
+            image: 'https://images.unsplash.com/photo-1516682705151-51216d11f674?auto=format&fit=crop&w=500&q=60'
+        },
+        {
+            category: 'snakehead',
+            categoryName: '類別 B',
+            name: '幻彩藍寶石雷龍',
+            price: 800,
+            stock: 2,
+            image: 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?auto=format&fit=crop&w=500&q=60'
+        },
+
+        // --- 新增：飼料區 (food) ---
+        {
+            category: 'food',
+            categoryName: '類別 C',
+            name: '高蛋白底棲魚飼料 (沉水)',
+            price: 150,
+            stock: 5,
+            image: 'https://images.unsplash.com/photo-1623356302022-62ebdd3f5b87?auto=format&fit=crop&w=500&q=60' // 飼料示意圖
+        },
+        {
+            category: 'food',
+            categoryName: '類別 C',
+            name: '雷龍專用上浮性飼料',
+            price: 280,
+            stock: 3,
+            image: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&w=500&q=60' // 飼料示意圖
+        },
+
+        // --- 新增：其他區 (others) ---
+        {
+            category: 'others',
+            categoryName: '類別 D',
+            name: '小榕 (帶沉木)',
+            price: 120,
+            stock: 6,
+            image: 'https://images.unsplash.com/photo-1541680670548-88e8cd2d4444?auto=format&fit=crop&w=500&q=60' // 水草示意圖
+        },
+        {
+            category: 'others',
+            categoryName: '類別 D',
+            name: '水妖精過濾器 (M號)',
+            price: 80,
+            stock: 12,
+            image: 'https://images.unsplash.com/photo-1524704796725-9fc3044a58b2?auto=format&fit=crop&w=500&q=60' // 器材示意圖
+        }
+    ];
+
+    // ==========================================
+    // ⚙️ 系統邏輯區 (不需要修改)
+    // ==========================================
+    
+    // 設定今日日期
+    const date = new Date();
+    document.getElementById('todayDate').innerText = `資料更新：${date.getFullYear()}/${date.getMonth()+1}/${date.getDate()}`;
+
+    // 初始化渲染
+    function renderData() {
+        const tbody = document.getElementById('tableBody');
+        const grid = document.getElementById('gridView');
+        tbody.innerHTML = '';
+        grid.innerHTML = '';
+
+        fishData.forEach((item, index) => {
+            // 產生表格行 (List)
+            const tr = document.createElement('tr');
+            tr.className = `item-${item.category}`;
+            tr.innerHTML = `
+                <td><strong>${item.name}</strong></td>
+                <td><span style="background:#eee; padding:2px 8px; border-radius:10px; font-size:12px;">${item.categoryName}</span></td>
+                <td>${item.price.toLocaleString()}</td>
+                <td>${item.stock}</td>
+                <td><button class="jump-btn" onclick="jumpToPhoto(${index})">👁️ 查看</button></td>
+            `;
+            tbody.appendChild(tr);
+
+            // 產生卡片 (Grid)
+            const card = document.createElement('div');
+            card.className = `card item-${item.category}`;
+            card.id = `card-${index}`;
+            card.innerHTML = `
+                <img src="${item.image}" alt="${item.name}">
+                <div class="card-content">
+                    <h3 class="fish-name">${item.name}</h3>
+                    <p class="fish-price">NT$ ${item.price.toLocaleString()} <span>在庫: ${item.stock}</span></p>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    // 分類過濾功能
+    function filterCategory(category) {
+        // 更新按鈕狀態
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+
+        // 過濾清單與卡片
+        const items = document.querySelectorAll('#tableBody tr, #gridView .card');
+        items.forEach(item => {
+            if (category === 'all' || item.classList.contains('item-' + category)) {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    // 視角切換功能 (清單 / 網格)
+    function switchView(view) {
+        const listView = document.getElementById('listView');
+        const gridView = document.getElementById('gridView');
+        const btnList = document.getElementById('btnList');
+        const btnGrid = document.getElementById('btnGrid');
+
+        if (view === 'list') {
+            listView.classList.remove('hidden');
+            gridView.classList.add('hidden');
+            btnList.classList.add('active');
+            btnGrid.classList.remove('active');
+        } else {
+            listView.classList.add('hidden');
+            gridView.classList.remove('hidden');
+            btnList.classList.remove('active');
+            btnGrid.classList.add('active');
+        }
+    }
+
+    // 從清單跳轉至照片
+    function jumpToPhoto(index) {
+        // 1. 切換到照片模式
+        switchView('grid');
+        
+        // 2. 找到對應的卡片
+        const targetCard = document.getElementById(`card-${index}`);
+        
+        // 3. 確保該卡片的分類是顯示狀態 (強制切換到全部顯示)
+        document.querySelector('.tab-btn').click(); 
+        
+        // 4. 滾動到該卡片位置，並加上短暫的發光特效
+        setTimeout(() => {
+            targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // 移除舊的高光
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('highlight'));
+            // 加上新的高光
+            targetCard.classList.add('highlight');
+            
+            // 1.5秒後移除高光
+            setTimeout(() => {
+                targetCard.classList.remove('highlight');
+            }, 1500);
+        }, 100);
+    }
+
+    // 網頁載入時執行渲染
+    renderData();
+</script>
+
+</body>
+</html>
