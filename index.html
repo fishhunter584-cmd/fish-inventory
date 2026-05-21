@@ -4,7 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>內部資產管理系統 - 水族部</title>
+    <!-- 引入 PapaParse 工具，用來解析 Google 試算表的 CSV 資料 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
+        /* (這裡的 CSS 樣式完全沒有改變，保持你原本的手機版優化外觀) */
         :root {
             --primary-color: #2c3e50;
             --secondary-color: #34495e;
@@ -13,221 +16,53 @@
             --text-color: #2c3e50;
             --border-color: #dcdde1;
         }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 20px;
-            -webkit-tap-highlight-color: transparent; /* 移除手機點擊高亮藍框 */
-        }
-
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 20px;
-            margin-bottom: 20px;
-        }
-
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; -webkit-tap-highlight-color: transparent; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px; }
         h1 { margin: 0; font-size: 24px; color: var(--primary-color); }
-
-        /* 控制列：分類與視角切換 */
-        .controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
+        .controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
         .tabs { display: flex; gap: 10px; }
-        
-        .tab-btn, .view-btn {
-            padding: 8px 16px;
-            border: 1px solid var(--border-color);
-            background-color: #f1f2f6;
-            color: var(--secondary-color);
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: all 0.2s ease;
-            white-space: nowrap; /* 避免文字斷行 */
-        }
-
+        .tab-btn, .view-btn { padding: 8px 16px; border: 1px solid var(--border-color); background-color: #f1f2f6; color: var(--secondary-color); border-radius: 5px; cursor: pointer; font-weight: bold; transition: all 0.2s ease; white-space: nowrap; }
         .tab-btn:hover, .view-btn:hover { background-color: #e1e2e6; }
         .tab-btn.active { background-color: var(--accent-color); color: white; border-color: var(--accent-color); }
         .view-btn.active { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
-
-        /* --- 條列式 (表格) 樣式 --- */
-        .table-wrapper {
-            width: 100%;
-            overflow-x: auto; /* 核心：手機版超出時可橫向捲動 */
-            -webkit-overflow-scrolling: touch; /* 讓 iOS 捲動更平滑 */
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 15px;
-            min-width: 500px; /* 確保在手機上表格不會被擠壓到變形 */
-        }
-
-        th, td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-        }
-
+        .table-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        table { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 500px; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); }
         th { background-color: #f8f9fa; font-weight: 600; color: var(--primary-color); }
         tr:hover { background-color: #f1f2f6; }
-
-        .jump-btn {
-            background-color: transparent;
-            border: 1px solid var(--accent-color);
-            color: var(--accent-color);
-            padding: 6px 12px; /* 加大觸控範圍 */
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 13px;
-        }
+        .jump-btn { background-color: transparent; border: 1px solid var(--accent-color); color: var(--accent-color); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; }
         .jump-btn:hover { background-color: var(--accent-color); color: white; }
-
-        /* --- 照片模式 (網格) 樣式 --- */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 20px;
-        }
-
-        .card {
-            background: white;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            overflow: hidden;
-            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.3s;
-        }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+        .card { background: white; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.3s; }
         .card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px rgba(0,0,0,0.1); }
-        
-        .card img {
-            width: 100%;
-            height: 180px;
-            object-fit: cover;
-            display: block;
-            background-color: #ddd;
-        }
-
+        .card img { width: 100%; height: 180px; object-fit: cover; display: block; background-color: #ddd; }
         .card-content { padding: 15px; }
         .fish-name { font-size: 17px; font-weight: bold; margin: 0 0 10px 0; }
-        .fish-price {
-            color: #e74c3c; font-weight: bold; font-size: 16px; margin: 0;
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .fish-price span {
-            font-size: 12px; color: #7f8c8d; background: #ecf0f1; padding: 3px 8px; border-radius: 12px;
-        }
-
-        /* 跳轉時的高光動畫 */
-        .highlight {
-            border: 2px solid #e74c3c;
-            box-shadow: 0 0 15px rgba(231, 76, 60, 0.4);
-            animation: flash 1.5s ease-out;
-        }
-
-        @keyframes flash {
-            0% { background-color: #fadbd8; }
-            100% { background-color: white; }
-        }
-
+        .fish-price { color: #e74c3c; font-weight: bold; font-size: 16px; margin: 0; display: flex; justify-content: space-between; align-items: center; }
+        .fish-price span { font-size: 12px; color: #7f8c8d; background: #ecf0f1; padding: 3px 8px; border-radius: 12px; }
+        .highlight { border: 2px solid #e74c3c; box-shadow: 0 0 15px rgba(231, 76, 60, 0.4); animation: flash 1.5s ease-out; }
+        @keyframes flash { 0% { background-color: #fadbd8; } 100% { background-color: white; } }
         .hidden { display: none !important; }
+        /* 資料載入中的提示字樣 */
+        #loadingMsg { text-align: center; padding: 40px; color: #7f8c8d; font-weight: bold; }
 
-        /* =================================================== */
-        /* 📱 手機版專屬 RWD 樣式更新 (螢幕小於 600px 時啟用) */
-        /* =================================================== */
         @media (max-width: 600px) {
-            body {
-                padding: 10px; /* 縮小外部間距，留給內容更多空間 */
-            }
-
-            .container {
-                padding: 15px;
-                border-radius: 8px;
-            }
-
-            header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 5px;
-                padding-bottom: 12px;
-                margin-bottom: 15px;
-            }
-
+            body { padding: 10px; }
+            .container { padding: 15px; border-radius: 8px; }
+            header { flex-direction: column; align-items: flex-start; gap: 5px; padding-bottom: 12px; margin-bottom: 15px; }
             h1 { font-size: 20px; }
-
-            .controls {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 12px;
-            }
-
-            /* 分類選單在手機上可以橫向滑動，不被切斷 */
-            .tabs {
-                overflow-x: auto;
-                padding-bottom: 5px;
-                -webkit-overflow-scrolling: touch;
-            }
-
-            .tab-btn, .view-btn {
-                padding: 6px 12px;
-                font-size: 13px;
-            }
-
-            /* 讓 清單/照片 兩個切換按鈕在手機上各佔一半寬度 */
-            .views {
-                display: flex;
-                width: 100%;
-                gap: 5px;
-            }
-            .view-btn {
-                flex: 1;
-                text-align: center;
-            }
-
-            th, td {
-                padding: 10px 8px;
-                font-size: 14px;
-            }
-
-            /* 手機版卡片自動縮小成雙排排版 */
-            .grid {
-                grid-template-columns: repeat(2, 1fr); /* 強制兩排 */
-                gap: 10px; /* 縮小卡片間距 */
-            }
-
-            .card img {
-                height: 120px; /* 縮小手機版照片高度 */
-            }
-
+            .controls { flex-direction: column; align-items: stretch; gap: 12px; }
+            .tabs { overflow-x: auto; padding-bottom: 5px; -webkit-overflow-scrolling: touch; }
+            .tab-btn, .view-btn { padding: 6px 12px; font-size: 13px; }
+            .views { display: flex; width: 100%; gap: 5px; }
+            .view-btn { flex: 1; text-align: center; }
+            th, td { padding: 10px 8px; font-size: 14px; }
+            .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .card img { height: 120px; }
             .card-content { padding: 10px; }
             .fish-name { font-size: 14px; margin-bottom: 5px; }
-            .fish-price { 
-                font-size: 13px; 
-                flex-direction: column; /* 價格與庫存在手機上改為上下排，避免擠壓 */
-                align-items: flex-start;
-                gap: 5px;
-            }
+            .fish-price { font-size: 13px; flex-direction: column; align-items: flex-start; gap: 5px; }
             .fish-price span { font-size: 11px; padding: 1px 6px; }
         }
     </style>
@@ -254,7 +89,11 @@
         </div>
     </div>
 
-    <div id="listView">
+    <!-- 載入中提示 -->
+    <div id="loadingMsg">📡 正在從資料庫同步最新庫存資料...</div>
+
+    <!-- 條列模式 -->
+    <div id="listView" class="hidden">
         <div class="table-wrapper">
             <table>
                 <thead>
@@ -266,212 +105,57 @@
                         <th>操作</th>
                     </tr>
                 </thead>
-                <tbody id="tableBody">
-                    </tbody>
+                <tbody id="tableBody"></tbody>
             </table>
         </div>
     </div>
 
-    <div id="gridView" class="grid hidden">
-        </div>
+    <!-- 照片模式 -->
+    <div id="gridView" class="grid hidden"></div>
 </div>
 
 <script>
     // ==========================================
-    // 🐟 資料區
+    // 🔗 這裡貼上你剛剛發布出來的 Google 試算表 CSV 網址！
     // ==========================================
-    const fishData = [
-        {
-            category: 'corydoras',
-            categoryName: '類別 A',
-            name: '紫羅蘭鼠 (4.5-5cm)',
-            price: 750,
-            stock: 15,
-            image: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=500&q=60'
-        },
-        {
-            category: 'corydoras',
-            categoryName: '類別 A',
-            name: '尼格羅青鼠 (4.5-5cm)',
-            price: 600,
-            stock: 30,
-            image: 'https://images.unsplash.com/photo-1522069169874-c58ec4b604f1?auto=format&fit=crop&w=500&q=60'
-        },
-        {
-            category: 'corydoras',
-            categoryName: '類別 A',
-            name: '黑箭紅頭鼠 (4.5-5cm)',
-            price: 700,
-            stock: 30,
-            image: 'https://images.unsplash.com/photo-1522069169874-c58ec4b604f1?auto=format&fit=crop&w=500&q=60'
-        },
-        {
-            category: 'corydoras',
-            categoryName: '類別 A',
-            name: '皇冠黑背鼠 (4.5-5cm)',
-            price: 600,
-            stock: 30,
-            image: 'https://images.unsplash.com/photo-1522069169874-c58ec4b604f1?auto=format&fit=crop&w=500&q=60'
-        },
-        {
-            category: 'corydoras',
-            categoryName: '類別 A',
-            name: '皇冠珍珠鼠 (4.5-5.5cm)',
-            price: 550,
-            stock: 30,
-            image: 'https://images.unsplash.com/photo-1522069169874-c58ec4b604f1?auto=format&fit=crop&w=500&q=60'
-        },
-        {
-            category: 'corydoras',
-            categoryName: '類別 A',
-            name: '黃鰭紳士鼠 (3cm)',
-            price: 200,
-            stock: 30,
-            image: 'https://images.unsplash.com/photo-1522069169874-c58ec4b604f1?auto=format&fit=crop&w=500&q=60'
-        },
-        {
-            category: 'corydoras',
-            categoryName: '類別 A',
-            name: '超級印地安鼠 (4.5-5cm)',
-            price: 750,
-            stock: 30,
-            image: 'https://images.unsplash.com/photo-1522069169874-c58ec4b604f1?auto=format&fit=crop&w=500&q=60'
-        },
-        {
-            category: 'corydoras',
-            categoryName: '類別 A',
-            name: '瓜波鼠 (4-4.5cm)',
-            price: 1400,
-            stock: 30,
-            image: 'https://images.unsplash.com/photo-1522069169874-c58ec4b604f1?auto=format&fit=crop&w=500&q=60'
-        },
-        {
-            category: 'corydoras',
-            categoryName: '類別 A',
-            name: 'CW173 偽斑馬鼠 (3.5-4cm)',
-            price: 2000,
-            stock: 30,
-            image: 'https://images.unsplash.com/photo-1522069169874-c58ec4b604f1?auto=format&fit=crop&w=500&q=60'
-        },
-        {
-            category: 'corydoras',
-            categoryName: '鼠魚',
-            name: 'CB芯娜鼠 (2.5cm)',
-            price: 1500,
-            stock: 30,
-            image: 'https://images.unsplash.com/photo-1522069169874-c58ec4b604f1?auto=format&fit=crop&w=500&q=60'
-        },
-        {
-            category: 'corydoras',
-            categoryName: '類別 A',
-            name: '人工駭客鼠 (3.5cm)',
-            price: 500,
-            stock: 30,
-            image: 'https://images.unsplash.com/photo-1522069169874-c58ec4b604f1?auto=format&fit=crop&w=500&q=60'
-        },
-        {
-            category: 'corydoras',
-            categoryName: '類別 A',
-            name: '塔巴赫斯蝙蝠俠 (5cm)',
-            price: 1700,
-            stock: 30,
-            image: 'https://images.unsplash.com/photo-1522069169874-c58ec4b604f1?auto=format&fit=crop&w=500&q=60'
-        },
-        {
-            category: 'corydoras',
-            categoryName: '類別 A',
-            name: '人工自繁大衛鼠 (3.5-4cm)',
-            price: 450,
-            stock: 30,
-            image: 'https://images.unsplash.com/photo-1522069169874-c58ec4b604f1?auto=format&fit=crop&w=500&q=60'
-        },
-        {
-            category: 'snakehead',
-            categoryName: '類別 B',
-            name: '七彩雷龍 (Channa bleheri)',
-            price: 450,
-            stock: 3,
-            image: 'https://images.unsplash.com/photo-1516682705151-51216d11f674?auto=format&fit=crop&w=500&q=60'
-        },
-        {
-            category: 'snakehead',
-            categoryName: '類別 B',
-            name: '幻彩藍寶石雷龍',
-            price: 800,
-            stock: 2,
-            image: 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?auto=format&fit=crop&w=500&q=60'
-        },
-        {
-            category: 'corydoras',
-            categoryName: '雷龍',
-            name: '血斑二型雷龍 (11-14cm)',
-            price: 1000,
-            stock: 30,
-            image: 'https://images.unsplash.com/photo-1522069169874-c58ec4b604f1?auto=format&fit=crop&w=500&q=60'
-        },
-        {
-            category: 'corydoras',
-            categoryName: '雷龍',
-            name: '阿薩姆雷龍  (8-9cm)',
-            price: 450,
-            stock: 30,
-            image: 'https://images.unsplash.com/photo-1522069169874-c58ec4b604f1?auto=format&fit=crop&w=500&q=60'
-        },
-        {
-            category: 'corydoras',
-            categoryName: '雷龍',
-            name: '馬彩雷龍 (9-10cm)',
-            price: 900,
-            stock: 30,
-            image: 'https://images.unsplash.com/photo-1522069169874-c58ec4b604f1?auto=format&fit=crop&w=500&q=60'
-        },
-        {
-            category: 'corydoras',
-            categoryName: '雷龍',
-            name: '火背雷龍 (野生14-15cm)',
-            price: 3000,
-            stock: 30,
-            image: 'https://images.unsplash.com/photo-1522069169874-c58ec4b604f1?auto=format&fit=crop&w=500&q=60'
-        },
-        {
-            category: 'corydoras',
-            categoryName: '雷龍',
-            name: '火背雷龍 (人工仔魚7cm)',
-            price: 1000,
-            stock: 30,
-            image: 'https://images.unsplash.com/photo-1522069169874-c58ec4b604f1?auto=format&fit=crop&w=500&q=60'
-        },
-        {
-            category: 'corydoras',
-            categoryName: '雷龍',
-            name: '火背雷龍 (人工仔魚5cm)',
-            price: 800,
-            stock: 30,
-            image: 'https://images.unsplash.com/photo-1522069169874-c58ec4b604f1?auto=format&fit=crop&w=500&q=60'
-        },
-        {
-            category: 'food',
-            categoryName: '類別 C',
-            name: '高蛋白底棲魚飼料 (沉水)',
-            price: 150,
-            stock: 5,
-            image: 'https://images.unsplash.com/photo-1623356302022-62ebdd3f5b87?auto=format&fit=crop&w=500&q=60'
-        },
-        {
-            category: 'others',
-            categoryName: '類別 D',
-            name: '小榕 (帶沉木)',
-            price: 120,
-            stock: 6,
-            image: 'https://images.unsplash.com/photo-1541680670548-88e8cd2d4444?auto=format&fit=crop&w=500&q=60'
-        }
-    ];
+    const CSV_URL = "請將你複製的 CSV 網址貼在這些引號裡面";
 
-    // ==========================================
-    // ⚙️ 系統邏輯區
-    // ==========================================
+    // 儲存從雲端抓下來的資料
+    let fishData = [];
+
     const date = new Date();
     document.getElementById('todayDate').innerText = `資料更新：${date.getFullYear()}/${date.getMonth()+1}/${date.getDate()}`;
+
+    // 從 Google 試算表抓取資料的函數
+    function loadDataFromGoogleSheet() {
+        if (CSV_URL === "https://docs.google.com/spreadsheets/d/e/2PACX-1vTvsgzT4KM1EZ0bMfJtt2_z7kJtIZwU_hmRJPzxMaTxiHU9aDeiN-kk10POs16OiVLeMvLIdy6qajqc/pub?output=csv") {
+            document.getElementById('loadingMsg').innerText = '⚠️ 請先在程式碼底部設定你的 Google 試算表網址！';
+            return;
+        }
+
+        Papa.parse(CSV_URL, {
+            download: true,
+            header: true, // 告訴解析器第一行是標題
+            skipEmptyLines: true,
+            complete: function(results) {
+                // 將試算表的字串數字轉換為真正的數字
+                fishData = results.data.map(item => ({
+                    ...item,
+                    price: Number(item.price),
+                    stock: Number(item.stock)
+                }));
+                
+                // 資料載入完成，隱藏提示，顯示表格並進行渲染
+                document.getElementById('loadingMsg').style.display = 'none';
+                document.getElementById('listView').classList.remove('hidden');
+                renderData();
+            },
+            error: function(err) {
+                document.getElementById('loadingMsg').innerText = '❌ 資料同步失敗，請確認試算表網址是否正確。';
+                console.error(err);
+            }
+        });
+    }
 
     function renderData() {
         const tbody = document.getElementById('tableBody');
@@ -505,6 +189,7 @@
         });
     }
 
+    // --- 以下為切換功能的程式碼，保持不變 ---
     function filterCategory(category) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         if (event && event.currentTarget) {
@@ -544,7 +229,6 @@
         switchView('grid');
         const targetCard = document.getElementById(`card-${index}`);
         
-        // 強制切換回第一個「全部顯示」按鈕的樣式
         const firstTab = document.querySelector('.tab-btn');
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         firstTab.classList.add('active');
@@ -560,7 +244,8 @@
         }, 100);
     }
 
-    renderData();
+    // 網頁開啟時，自動去 Google 試算表抓資料
+    loadDataFromGoogleSheet();
 </script>
 
 </body>
