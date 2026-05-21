@@ -128,10 +128,7 @@
 
     // 從 Google 試算表抓取資料的函數
     function loadDataFromGoogleSheet() {
-        if (CSV_URL === "https://docs.google.com/spreadsheets/d/e/2PACX-1vTvsgzT4KM1EZ0bMfJtt2_z7kJtIZwU_hmRJPzxMaTxiHU9aDeiN-kk10POs16OiVLeMvLIdy6qajqc/pub?output=csv") {
-            document.getElementById('loadingMsg').innerText = '⚠️ 請先在程式碼底部設定你的 Google 試算表網址！';
-            return;
-        }
+        // (已經幫你把錯誤檢查的機制拿掉了)
 
         Papa.parse(CSV_URL, {
             download: true,
@@ -163,6 +160,13 @@
         tbody.innerHTML = '';
         grid.innerHTML = '';
 
+        // 如果試算表沒資料，顯示提示
+        if(fishData.length === 0) {
+             document.getElementById('loadingMsg').innerText = '⚠️ 試算表裡面目前沒有資料喔！';
+             document.getElementById('loadingMsg').style.display = 'block';
+             return;
+        }
+
         fishData.forEach((item, index) => {
             const tr = document.createElement('tr');
             tr.className = `item-${item.category}`;
@@ -189,7 +193,7 @@
         });
     }
 
-    // --- 以下為切換功能的程式碼，保持不變 ---
+    // --- 切換功能的程式碼 ---
     function filterCategory(category) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         if (event && event.currentTarget) {
@@ -247,6 +251,3 @@
     // 網頁開啟時，自動去 Google 試算表抓資料
     loadDataFromGoogleSheet();
 </script>
-
-</body>
-</html>
