@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>內部資產管理系統 - 水族部</title>
     <style>
         :root {
@@ -20,6 +20,7 @@
             color: var(--text-color);
             margin: 0;
             padding: 20px;
+            -webkit-tap-highlight-color: transparent; /* 移除手機點擊高亮藍框 */
         }
 
         .container {
@@ -52,7 +53,7 @@
             gap: 15px;
         }
 
-        .tabs { display: flex; gap: 10px; flex-wrap: wrap; }
+        .tabs { display: flex; gap: 10px; }
         
         .tab-btn, .view-btn {
             padding: 8px 16px;
@@ -63,6 +64,7 @@
             cursor: pointer;
             font-weight: bold;
             transition: all 0.2s ease;
+            white-space: nowrap; /* 避免文字斷行 */
         }
 
         .tab-btn:hover, .view-btn:hover { background-color: #e1e2e6; }
@@ -70,10 +72,17 @@
         .view-btn.active { background-color: var(--primary-color); color: white; border-color: var(--primary-color); }
 
         /* --- 條列式 (表格) 樣式 --- */
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto; /* 核心：手機版超出時可橫向捲動 */
+            -webkit-overflow-scrolling: touch; /* 讓 iOS 捲動更平滑 */
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
             font-size: 15px;
+            min-width: 500px; /* 確保在手機上表格不會被擠壓到變形 */
         }
 
         th, td {
@@ -89,7 +98,7 @@
             background-color: transparent;
             border: 1px solid var(--accent-color);
             color: var(--accent-color);
-            padding: 4px 10px;
+            padding: 6px 12px; /* 加大觸控範圍 */
             border-radius: 4px;
             cursor: pointer;
             font-size: 13px;
@@ -99,7 +108,7 @@
         /* --- 照片模式 (網格) 樣式 --- */
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
             gap: 20px;
         }
 
@@ -121,7 +130,7 @@
         }
 
         .card-content { padding: 15px; }
-        .fish-name { font-size: 18px; font-weight: bold; margin: 0 0 10px 0; }
+        .fish-name { font-size: 17px; font-weight: bold; margin: 0 0 10px 0; }
         .fish-price {
             color: #e74c3c; font-weight: bold; font-size: 16px; margin: 0;
             display: flex; justify-content: space-between; align-items: center;
@@ -143,6 +152,84 @@
         }
 
         .hidden { display: none !important; }
+
+        /* =================================================== */
+        /* 📱 手機版專屬 RWD 樣式更新 (螢幕小於 600px 時啟用) */
+        /* =================================================== */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px; /* 縮小外部間距，留給內容更多空間 */
+            }
+
+            .container {
+                padding: 15px;
+                border-radius: 8px;
+            }
+
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+                padding-bottom: 12px;
+                margin-bottom: 15px;
+            }
+
+            h1 { font-size: 20px; }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+
+            /* 分類選單在手機上可以橫向滑動，不被切斷 */
+            .tabs {
+                overflow-x: auto;
+                padding-bottom: 5px;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .tab-btn, .view-btn {
+                padding: 6px 12px;
+                font-size: 13px;
+            }
+
+            /* 讓 清單/照片 兩個切換按鈕在手機上各佔一半寬度 */
+            .views {
+                display: flex;
+                width: 100%;
+                gap: 5px;
+            }
+            .view-btn {
+                flex: 1;
+                text-align: center;
+            }
+
+            th, td {
+                padding: 10px 8px;
+                font-size: 14px;
+            }
+
+            /* 手機版卡片自動縮小成雙排排版 */
+            .grid {
+                grid-template-columns: repeat(2, 1fr); /* 強制兩排 */
+                gap: 10px; /* 縮小卡片間距 */
+            }
+
+            .card img {
+                height: 120px; /* 縮小手機版照片高度 */
+            }
+
+            .card-content { padding: 10px; }
+            .fish-name { font-size: 14px; margin-bottom: 5px; }
+            .fish-price { 
+                font-size: 13px; 
+                flex-direction: column; /* 價格與庫存在手機上改為上下排，避免擠壓 */
+                align-items: flex-start;
+                gap: 5px;
+            }
+            .fish-price span { font-size: 11px; padding: 1px 6px; }
+        }
     </style>
 </head>
 <body>
@@ -158,7 +245,6 @@
             <button class="tab-btn active" onclick="filterCategory('all')">全部顯示</button>
             <button class="tab-btn" onclick="filterCategory('corydoras')">類別 A (鼠魚)</button>
             <button class="tab-btn" onclick="filterCategory('snakehead')">類別 B (雷龍)</button>
-            <!-- 新增了飼料與其他的按鈕 -->
             <button class="tab-btn" onclick="filterCategory('food')">類別 C (飼料)</button>
             <button class="tab-btn" onclick="filterCategory('others')">類別 D (其他)</button>
         </div>
@@ -168,36 +254,33 @@
         </div>
     </div>
 
-    <!-- 條列模式 (表格) -->
     <div id="listView">
-        <table>
-            <thead>
-                <tr>
-                    <th>品項編號 / 名稱</th>
-                    <th>分類</th>
-                    <th>單價 (NT$)</th>
-                    <th>當前庫存</th>
-                    <th>操作</th>
-                </tr>
-            </thead>
-            <tbody id="tableBody">
-                <!-- 由 JavaScript 自動產生 -->
-            </tbody>
-        </table>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>品項編號 / 名稱</th>
+                        <th>分類</th>
+                        <th>單價 (NT$)</th>
+                        <th>當前庫存</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    </tbody>
+            </table>
+        </div>
     </div>
 
-    <!-- 照片模式 (網格) -->
     <div id="gridView" class="grid hidden">
-        <!-- 由 JavaScript 自動產生 -->
-    </div>
+        </div>
 </div>
 
 <script>
     // ==========================================
-    // 🐟 資料區 (以後只要修改這裡就好！)
+    // 🐟 資料區
     // ==========================================
     const fishData = [
-        // --- 鼠魚區 (corydoras) ---
         {
             category: 'corydoras',
             categoryName: '類別 A',
@@ -214,8 +297,6 @@
             stock: 30,
             image: 'https://images.unsplash.com/photo-1522069169874-c58ec4b604f1?auto=format&fit=crop&w=500&q=60'
         },
-        
-        // --- 雷龍區 (snakehead) ---
         {
             category: 'snakehead',
             categoryName: '類別 B',
@@ -232,53 +313,30 @@
             stock: 2,
             image: 'https://images.unsplash.com/photo-1534043464124-3be32fe000c9?auto=format&fit=crop&w=500&q=60'
         },
-
-        // --- 新增：飼料區 (food) ---
         {
             category: 'food',
             categoryName: '類別 C',
             name: '高蛋白底棲魚飼料 (沉水)',
             price: 150,
             stock: 5,
-            image: 'https://images.unsplash.com/photo-1623356302022-62ebdd3f5b87?auto=format&fit=crop&w=500&q=60' // 飼料示意圖
+            image: 'https://images.unsplash.com/photo-1623356302022-62ebdd3f5b87?auto=format&fit=crop&w=500&q=60'
         },
-        {
-            category: 'food',
-            categoryName: '類別 C',
-            name: '雷龍專用上浮性飼料',
-            price: 280,
-            stock: 3,
-            image: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&w=500&q=60' // 飼料示意圖
-        },
-
-        // --- 新增：其他區 (others) ---
         {
             category: 'others',
             categoryName: '類別 D',
             name: '小榕 (帶沉木)',
             price: 120,
             stock: 6,
-            image: 'https://images.unsplash.com/photo-1541680670548-88e8cd2d4444?auto=format&fit=crop&w=500&q=60' // 水草示意圖
-        },
-        {
-            category: 'others',
-            categoryName: '類別 D',
-            name: '水妖精過濾器 (M號)',
-            price: 80,
-            stock: 12,
-            image: 'https://images.unsplash.com/photo-1524704796725-9fc3044a58b2?auto=format&fit=crop&w=500&q=60' // 器材示意圖
+            image: 'https://images.unsplash.com/photo-1541680670548-88e8cd2d4444?auto=format&fit=crop&w=500&q=60'
         }
     ];
 
     // ==========================================
-    // ⚙️ 系統邏輯區 (不需要修改)
+    // ⚙️ 系統邏輯區
     // ==========================================
-    
-    // 設定今日日期
     const date = new Date();
     document.getElementById('todayDate').innerText = `資料更新：${date.getFullYear()}/${date.getMonth()+1}/${date.getDate()}`;
 
-    // 初始化渲染
     function renderData() {
         const tbody = document.getElementById('tableBody');
         const grid = document.getElementById('gridView');
@@ -286,7 +344,6 @@
         grid.innerHTML = '';
 
         fishData.forEach((item, index) => {
-            // 產生表格行 (List)
             const tr = document.createElement('tr');
             tr.className = `item-${item.category}`;
             tr.innerHTML = `
@@ -298,7 +355,6 @@
             `;
             tbody.appendChild(tr);
 
-            // 產生卡片 (Grid)
             const card = document.createElement('div');
             card.className = `card item-${item.category}`;
             card.id = `card-${index}`;
@@ -313,13 +369,12 @@
         });
     }
 
-    // 分類過濾功能
     function filterCategory(category) {
-        // 更新按鈕狀態
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        event.currentTarget.classList.add('active');
+        if (event && event.currentTarget) {
+            event.currentTarget.classList.add('active');
+        }
 
-        // 過濾清單與卡片
         const items = document.querySelectorAll('#tableBody tr, #gridView .card');
         items.forEach(item => {
             if (category === 'all' || item.classList.contains('item-' + category)) {
@@ -330,7 +385,6 @@
         });
     }
 
-    // 視角切換功能 (清單 / 網格)
     function switchView(view) {
         const listView = document.getElementById('listView');
         const gridView = document.getElementById('gridView');
@@ -350,34 +404,26 @@
         }
     }
 
-    // 從清單跳轉至照片
     function jumpToPhoto(index) {
-        // 1. 切換到照片模式
         switchView('grid');
-        
-        // 2. 找到對應的卡片
         const targetCard = document.getElementById(`card-${index}`);
         
-        // 3. 確保該卡片的分類是顯示狀態 (強制切換到全部顯示)
-        document.querySelector('.tab-btn').click(); 
+        // 強制切換回第一個「全部顯示」按鈕的樣式
+        const firstTab = document.querySelector('.tab-btn');
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        firstTab.classList.add('active');
         
-        // 4. 滾動到該卡片位置，並加上短暫的發光特效
+        const items = document.querySelectorAll('#tableBody tr, #gridView .card');
+        items.forEach(item => item.style.display = '');
+
         setTimeout(() => {
             targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
-            // 移除舊的高光
             document.querySelectorAll('.card').forEach(c => c.classList.remove('highlight'));
-            // 加上新的高光
             targetCard.classList.add('highlight');
-            
-            // 1.5秒後移除高光
-            setTimeout(() => {
-                targetCard.classList.remove('highlight');
-            }, 1500);
+            setTimeout(() => { targetCard.classList.remove('highlight'); }, 1500);
         }, 100);
     }
 
-    // 網頁載入時執行渲染
     renderData();
 </script>
 
